@@ -34,14 +34,15 @@ requirements:
 test:
   requires:
     - pip
+    - tree_sitter
   imports:
     - tree_sitter_python
   commands:
     - pip check
-    # grammar sanity without the 'tree-sitter' binding package (not on pkgs/main):
-    # unwrap the language capsule and read the TSLanguage struct's first int32,
-    # which is the grammar ABI version (LANGUAGE_VERSION in src/parser.c)
-    - python -c "import ctypes; import tree_sitter_python; ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p; ctypes.pythonapi.PyCapsule_GetPointer.argtypes = [ctypes.py_object, ctypes.c_char_p]; ptr = ctypes.pythonapi.PyCapsule_GetPointer(tree_sitter_python.language(), b'tree_sitter.Language'); abi = ctypes.c_int32.from_address(ptr).value; assert abi == 15, abi"
+    # parse with the core binding (tree_sitter) to prove the grammar loads and
+    # produces the expected root node; abi_version cross-checks the grammar's
+    # LANGUAGE_VERSION with the runtime
+    - python -c "import tree_sitter, tree_sitter_python; lang = tree_sitter.Language(tree_sitter_python.language()); assert lang.abi_version == 15, lang.abi_version; tree = tree_sitter.Parser(lang).parse(b'x = 1'); assert tree.root_node.type == 'module', tree.root_node.type"
 
 about:
   home: https://github.com/tree-sitter/tree-sitter-python
