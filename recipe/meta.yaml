@@ -1,0 +1,63 @@
+{% set name = "tree-sitter-python" %}
+{% set version = "0.25.0" %}
+
+package:
+  name: {{ name }}
+  version: {{ version }}
+
+source:
+  url: https://github.com/tree-sitter/{{ name }}/archive/refs/tags/v{{ version }}.tar.gz
+  sha256: 4609a3665a620e117acf795ff01b9e965880f81745f287a16336f4ca86cf270c
+
+build:
+  number: 0
+  skip: true  # [py<310]
+  script: {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - {{ stdlib('c') }}
+  host:
+    - python
+    - pip
+    - setuptools >=62.4.0
+    - wheel
+  run:
+    - python
+  run_constrained:
+    # from upstream [project.optional-dependencies] 'core' extra: tree-sitter~=0.24
+    # the core binding publishes as conda name tree_sitter (underscore) per its
+    # packaging convention; inert until that package exists on pkgs/main
+    # upstream 'core' extra says tree-sitter~=0.24, but this grammar is ABI 15,
+    # which needs tree-sitter >=0.25
+    - tree_sitter >=0.25,<1.0
+
+test:
+  requires:
+    - pip
+    - tree_sitter
+  imports:
+    - tree_sitter_python
+  commands:
+    - pip check
+    # parse with the core binding (tree_sitter) to prove the grammar loads and
+    # produces the expected root node; abi_version cross-checks the grammar's
+    # LANGUAGE_VERSION with the runtime
+    - python -c "import tree_sitter, tree_sitter_python; lang = tree_sitter.Language(tree_sitter_python.language()); assert lang.abi_version == 15, lang.abi_version; tree = tree_sitter.Parser(lang).parse(b'x = 1'); assert tree.root_node.type == 'module', tree.root_node.type"
+
+about:
+  home: https://github.com/tree-sitter/tree-sitter-python
+  summary: Python grammar for tree-sitter
+  description: >-
+    Python grammar for tree-sitter, providing a parser for Python source
+    code built with the tree-sitter incremental parsing toolkit.
+  license: MIT
+  license_family: MIT
+  license_file: LICENSE
+  doc_url: https://github.com/tree-sitter/tree-sitter-python#readme
+  dev_url: https://github.com/tree-sitter/tree-sitter-python
+
+extra:
+  recipe-maintainers:
+    - thewchan
